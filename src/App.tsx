@@ -21,6 +21,7 @@ export const HOVERCLASSNAME = 'FeatureGroup';
 class App extends Component<IAppProps, IAppState> {
   constructor(props: IAppProps) {
     super(props);
+    this.startOver.bind(this);
     this.onSVGFileChange.bind(this);
     this.selectedElementChanged.bind(this);
     this.setDescription.bind(this);
@@ -33,12 +34,25 @@ class App extends Component<IAppProps, IAppState> {
 
   }
 
+  originalSVGString: string ='';
   scriptTag : Element|null = null;
   styleTag : Element|null = null;
   descriptionElement: HTMLParagraphElement|null = null;
   hoverElements: Element[] = [];
   fileName:string = '';
   svgComponent: RefObject<SVGComponent> = createRef();
+  inputRef: RefObject<HTMLInputElement> = createRef();
+
+  startOver = () =>{
+    this.styleTag=null;
+    this.scriptTag=null;
+    this.descriptionElement=null;
+    this.hoverElements = [];
+    
+    this.setState({ svgElement: null, description: '', selectedElement: null}, ()=>{
+      this.loadSVGString();      
+    });
+  };
 
   onSVGFileSave = () =>{
     if (this.state.svgElement == null){
@@ -71,42 +85,44 @@ class App extends Component<IAppProps, IAppState> {
     if (file != null) {
       const reader = new FileReader();
 
-      const result = await readerGetTextAsync(reader, file);
-      const parser = new DOMParser();
-
-      let doc = parser.parseFromString(result, "image/svg+xml")
-      let svg = this.findTag(doc.children, 'svg');
-      if (svg != null){
-        this.scriptTag  = this.findTag(svg.children, 'script');
-
-        let styleTags = this.findTags(svg.children, 'style');
-
-        for (let i =0; i< styleTags.length; i++){
-          let style = styleTags[i];
-          if (style.id === 'feature-group-style'){
-            this.styleTag = style;
-          }
-        }
-        if (this.styleTag == null){
-          this.styleTag = document.createElement('style');
-          this.styleTag.id = 'feature-group-style';
-          this.styleTag.innerHTML = this.generateStyleContents();
-          svg.insertBefore(this.styleTag, svg.firstChild);
-        }
-
-        let descTags = this.findTagsWithClass(svg.children, DESCRIPTIONCLASSNAME);
-        if (descTags.length > 0){
-          this.descriptionElement = descTags[0].getElementsByTagName('p')[0];
-        }
-
-        this.hoverElements = this.findTagsWithClass(svg.children, HOVERCLASSNAME)
-        
-        
-      }
-      this.setState({ svgElement: svg });
+      this.originalSVGString = await readerGetTextAsync(reader, file);
+      this.loadSVGString();      
     }
-
   };
+
+  loadSVGString(){
+    const parser = new DOMParser();
+    let doc = parser.parseFromString(this.originalSVGString, "image/svg+xml")
+    let svg = this.findTag(doc.children, 'svg');
+    if (svg != null){
+      this.scriptTag  = this.findTag(svg.children, 'script');
+
+      let styleTags = this.findTags(svg.children, 'style');
+
+      for (let i =0; i< styleTags.length; i++){
+        let style = styleTags[i];
+        if (style.id === 'feature-group-style'){
+          this.styleTag = style;
+        }
+      }
+      if (this.styleTag == null){
+        this.styleTag = document.createElement('style');
+        this.styleTag.id = 'feature-group-style';
+        this.styleTag.innerHTML = this.generateStyleContents();
+        svg.insertBefore(this.styleTag, svg.firstChild);
+      }
+
+      let descTags = this.findTagsWithClass(svg.children, DESCRIPTIONCLASSNAME);
+      if (descTags.length > 0){
+        this.descriptionElement = descTags[0].getElementsByTagName('p')[0];
+      }
+
+      this.hoverElements = this.findTagsWithClass(svg.children, HOVERCLASSNAME)
+      
+      
+    }
+    this.setState({ svgElement: svg });
+  }
 
   generateStyleContents():string{
     return `
@@ -238,6 +254,22 @@ class App extends Component<IAppProps, IAppState> {
     this.forceUpdate();
   }
 
+  undoHover(){
+    if (this.state.selectedElement == null){
+      return;
+    }
+    //tabindex="0" onkeypress="displayDescription(this)" onclick="displayDescription(this), focus()" focusable="true" class="FeatureGroup"
+    const element = this.state.selectedElement;
+    this.hoverElements.splice(this.hoverElements.indexOf(element), 1);
+    element.removeAttribute('tabindex');
+    element.removeAttribute('focusable');
+    element.removeAttribute('onclick');
+    element.removeAttribute('onkeypress');
+    if (element.classList.contains(HOVERCLASSNAME))
+      element.classList.remove(HOVERCLASSNAME);
+    this.forceUpdate();
+  }
+
   setHandlersForHoverElements(element: SVGElement){
     if (this.descriptionElement == null){
       element.setAttribute('onclick', `
@@ -253,6 +285,7 @@ class App extends Component<IAppProps, IAppState> {
       `)
     }
   }
+  
 
   render() {
     return (
@@ -262,12 +295,12 @@ class App extends Component<IAppProps, IAppState> {
           <div id='top-panel' style={{ height: '25%'}}>
             <div className="input-group mb-3" >
               <label className="input-group-text" htmlFor="inputGroupFile01">Load SVG</label>
-              <input type="file" className="form-control" id="inputGroupFile01" onChange={this.onSVGFileChange} />
+              <input ref={this.inputRef} type="file" className="form-control" id="inputGroupFile01" onChange={this.onSVGFileChange} />
               <button className="form-control btn btn-primary" id="inputGroupFile02" onClick={this.onSVGFileSave} >Save</button>
               <button className="btn btn-danger" data-bs-toggle="modal" data-bs-target="#makeSureModal">Start Over</button>
             </div>
 
-            {/*  Modal  */}
+          {/*  Modal  */}
 <div className="modal fade" id="makeSureModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div className="modal-dialog">
     <div className="modal-content">
@@ -280,23 +313,30 @@ class App extends Component<IAppProps, IAppState> {
       </div>
       <div className="modal-footer">
         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">No</button>
-        <button type="button" className="btn btn-danger">Yes</button>
+        <button type="button" className="btn btn-danger" data-bs-dismiss="modal" onClick={this.startOver}>Yes</button>
       </div>
     </div>
   </div>
 </div>
+      {/* End Modal */}
 
-            <button className='btn btn-secondary' disabled={this.state.selectedElement == null ? true : false}
+            <button className='btn btn-secondary m-1' disabled={this.state.selectedElement == null ? true : false}
               onClick={()=>this.setDescription()}
               >Set Description</button>
 
-            <button className='btn btn-secondary' disabled={this.state.selectedElement == null ? true : false}
+            <button className='btn btn-secondary m-1' disabled={this.state.selectedElement == null ? true : false}
               onClick={()=>this.makeHover()}
               >Make Hover</button>
 
-            <textarea className="form-control" id="exampleFormControlTextarea1" rows={3} 
-              value={this.state.description} onInput={(ev)=>this.onDescChanged(ev)}/>
+            <button className='btn btn-secondary m-1' disabled={this.state.selectedElement == null ? true : false}
+              onClick={()=>this.undoHover()}
+              >Undo Hover</button>
 
+            <div className="form-floating">
+              <textarea className="form-control" id="exampleFormControlTextarea1" rows={3} 
+                value={this.state.description} onInput={(ev)=>this.onDescChanged(ev)}/>
+                <label htmlFor="exampleFormControlTextarea1">Description Box Text</label>
+            </div>
           </div>
 
           <div id='rest-of-page' style={{ display: 'flex', height: '75%', flexDirection: 'row' }}>
