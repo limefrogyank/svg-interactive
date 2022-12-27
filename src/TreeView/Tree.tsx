@@ -14,7 +14,7 @@ class Tree extends Component<ITreeProps> {
 		if (this.props.children === undefined || this.props.children.length === 0){
 			return (
 			<>
-				<div>NOTHING!!</div>
+				<div></div>
 			</>
 			)
 		} else {

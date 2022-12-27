@@ -264,7 +264,27 @@ class App extends Component<IAppProps, IAppState> {
               <label className="input-group-text" htmlFor="inputGroupFile01">Load SVG</label>
               <input type="file" className="form-control" id="inputGroupFile01" onChange={this.onSVGFileChange} />
               <button className="form-control btn btn-primary" id="inputGroupFile02" onClick={this.onSVGFileSave} >Save</button>
+              <button className="btn btn-danger" data-bs-toggle="modal" data-bs-target="#makeSureModal">Start Over</button>
             </div>
+
+            {/*  Modal  */}
+<div className="modal fade" id="makeSureModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div className="modal-dialog">
+    <div className="modal-content">
+      <div className="modal-header">
+        <h1 className="modal-title fs-5" id="exampleModalLabel">Delete all changes?</h1>
+        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div className="modal-body">
+        Clicking Yes will remove all of your changes and reload the current SVG file from scratch.
+      </div>
+      <div className="modal-footer">
+        <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">No</button>
+        <button type="button" className="btn btn-danger">Yes</button>
+      </div>
+    </div>
+  </div>
+</div>
 
             <button className='btn btn-secondary' disabled={this.state.selectedElement == null ? true : false}
               onClick={()=>this.setDescription()}
@@ -287,9 +307,9 @@ class App extends Component<IAppProps, IAppState> {
                 <SVGTreeView svgElement={this.state.svgElement} selectedElementChanged={(ev,data)=>this.selectedElementChanged(ev,data)}></SVGTreeView>
               </div>
 
-              <div style={{ height: '300px', flex: '1 0 0px' }}>
+              {/* <div style={{ height: '300px', flex: '1 0 0px' }}>
                 Testing
-              </div>
+              </div> */}
 
             </div>
 

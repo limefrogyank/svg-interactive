@@ -14,7 +14,7 @@ class SVGComponent extends Component<ISVGComponentProps> {
 
 	render() {
 		if (this.props.svgElement == null){
-			return <div></div>;
+			return <div>Use the file chooser above to load an SVG</div>;
 		}	
 		return (
 		<>

@@ -57,7 +57,7 @@ class SVGTreeView extends Component<ISVGTreeViewProps> {
 
 	render() {
 		if (this.props.svgElement === null){
-			return <div>NOTHING!!</div>;
+			return <div></div>;
 		}	
 
 		let data :ITreeItemData[] =[];
